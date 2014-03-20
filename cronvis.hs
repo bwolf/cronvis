@@ -90,7 +90,6 @@ timeRange start end stepSecs = iter s
               | otherwise = current:(iter $ n + stepSecs)
               where current = posixSecondsToUTCTime (fromIntegral n :: NominalDiffTime)
 
-
 -- Simplified ISO8601 date format without seconds
 formatTimestampForOutput :: UTCTime -> String
 formatTimestampForOutput ts = formatTime defaultTimeLocale "%Y-%m-%dT%H:%M" ts

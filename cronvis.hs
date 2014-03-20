@@ -73,7 +73,7 @@ parseCronSyslog dateParser lines = map (parseCronLine dateParser) $ filter (isIn
 
 between :: UTCTime -> UTCTime -> [CronjobExecution] -> [CronjobExecution]
  -- take into account that the jobs are ordered by using takeWhile instead of filter
-between start end jobs = takeWhile (\j -> pred $ fst j) jobs
+between start end = takeWhile (pred . fst) -- (\j -> pred $ fst j)
     where pred t = t >= start && t < end
 
 -- Map of jobnames and their execution times in UTCTime
@@ -87,12 +87,12 @@ timeRange start end stepSecs = iter s
           e = floor (utcTimeToPOSIXSeconds end) :: Int
           iter n
               | n > e = []
-              | otherwise = current:(iter $ n + stepSecs)
+              | otherwise = current : iter (n + stepSecs)
               where current = posixSecondsToUTCTime (fromIntegral n :: NominalDiffTime)
 
 -- Simplified ISO8601 date format without seconds
 formatTimestampForOutput :: UTCTime -> String
-formatTimestampForOutput ts = formatTime defaultTimeLocale "%Y-%m-%dT%H:%M" ts
+formatTimestampForOutput = formatTime defaultTimeLocale "%Y-%m-%dT%H:%M"
 
 -- Get just the current year
 getCurrentYear :: IO Integer
@@ -107,13 +107,13 @@ parseIso8601Timestamp s = readTime defaultTimeLocale "%Y-%m-%dT%H:%M" s :: UTCTi
 
 -- Full timestamp each N minutes
 csvColumnTimestamps :: UTCTime -> UTCTime -> Int -> String
-csvColumnTimestamps start end stepSecs = concat $ intersperse filler timestamps
+csvColumnTimestamps start end stepSecs = intercalate filler timestamps -- concat $ intersperse filler timestamps
     where fullTimestampSecs = 60
           filler = concat $ replicate (fullTimestampSecs - 1) ";"
           timestamps = map formatTimestampForOutput (timeRange start end (stepSecs * fullTimestampSecs))
 
 csvColumnMinutes :: UTCTime -> UTCTime -> Int -> String
-csvColumnMinutes start end stepSecs = concatMap (\ut -> (show(minute ut)) ++ ";") range
+csvColumnMinutes start end stepSecs = concatMap (\ut -> show(minute ut) ++ ";") range
     where minute ut = todMin (timeToTimeOfDay $ utctDayTime ut)
           range = timeRange start end stepSecs
 
@@ -121,7 +121,7 @@ csvData :: UTCTime -> UTCTime -> Int -> Map.Map String [UTCTime] -> String
 csvData start end stepSecs jobnamesMap = concatMap printHelper jobnames
     where jobnames = sort (Map.keys jobnamesMap)
           pointPri times ut =
-              if elem ut times
+              if ut `elem` times
               then "R;"
               else ";"
           printHelper job =
@@ -149,7 +149,7 @@ foo = do
   let logLines = lines contents
   putStrLn $ "Got " ++ show(length logLines) ++ " lines"
   year <- getCurrentYear
-  putStrLn $ "Hello the current year is " ++ show(year)
+  putStrLn $ "Hello the current year is " ++ show year
   let dateParser = parseCronTimestamp year
   let database = parseCronSyslog dateParser logLines
   putStrLn $ "Got " ++ show(length database) ++ " cron entries"
@@ -163,7 +163,7 @@ main = do
   let logLines = lines contents
   putStrLn $ "Got " ++ show(length logLines) ++ " lines"
   year <- getCurrentYear
-  putStrLn $ "Hello the current year is " ++ show(year)
+  putStrLn $ "Hello the current year is " ++ show year
   let dateParser = parseCronTimestamp year
   let database = parseCronSyslog dateParser logLines
   putStrLn $ "Got " ++ show(length database) ++ " cron entries"

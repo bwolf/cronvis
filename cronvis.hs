@@ -30,7 +30,7 @@ removeAbsolutePath :: String -> String
 removeAbsolutePath s = reverse $ takeWhile (/= '/') $ reverse s
 
 simplifyCmd :: String -> String
-simplifyCmd = removeAbsolutePath. stringTrimmedUpToChar '>' . stringTrimmedUpToChar ' ' .
+simplifyCmd = removeAbsolutePath . stringTrimmedUpToChar '>' . stringTrimmedUpToChar ' ' .
               removeNiceCmd . removeCronStartCmd . stringTrimmedUpToChar '#'
 
 extractCronJob :: String -> String
@@ -59,7 +59,6 @@ parseCronLine dateParser s = (time, jobname)
 
 -- Filter and parse all cron commands out of syslog log lines
 parseCronSyslog :: CronDateParser -> [String] -> [CronjobExecution]
--- parseCronSyslog dateParser lines = map (parseCronLine dateParser) cronLines
 parseCronSyslog dateParser lines = noEmpty $ parseIt
     where cronLines = filter (isInfixOf "/USR/SBIN/CRON") lines
           parseIt = map (parseCronLine dateParser) cronLines

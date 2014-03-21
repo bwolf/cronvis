@@ -140,15 +140,6 @@ s = parseIso8601Timestamp "2014-03-17T06:25"
 e = parseIso8601Timestamp "2014-03-17T07:26"
 
 main = do
-  args <- getArgs
-  if length(args) == 3
-  then
-      putStrLn "OK"
-  else
-      putStrLn "Usage: filename start end\n\tstart,end are ISO8601 timestamps without secs. (YYYY-mm-ddTHH:MM)"
-      exitFailure
-
-
   contents <- readFile "syslog-20140318"
   let logLines = lines contents
   year <- getCurrentYear

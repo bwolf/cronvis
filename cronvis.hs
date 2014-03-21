@@ -63,7 +63,7 @@ parseCronLine dateParser s = (time, jobname)
 
 -- Filter and parse all cron commands out of syslog log lines
 parseCronSyslog :: CronDateParser -> [String] -> [CronjobExecution]
-parseCronSyslog dateParser lines = noEmpty $ parseIt
+parseCronSyslog dateParser lines = noEmpty parseIt
     where cronLines = filter (isInfixOf "/USR/SBIN/CRON") lines
           parseIt = map (parseCronLine dateParser) cronLines
           noEmpty = filter (not . null . snd)
@@ -104,7 +104,7 @@ csvColumnTimestamps :: UTCTime -> UTCTime -> Int -> String
 csvColumnTimestamps start end stepSecs = intercalate filler timestamps
     where fullTimestampSecs = 60
           filler     = concat $ replicate fullTimestampSecs ";"
-          range      = (timeRange start end (stepSecs * fullTimestampSecs ))
+          range      = timeRange start end (stepSecs * fullTimestampSecs)
           timestamps = map formatMinuteTimestampForOutput range
 
 csvColumnMinutes :: UTCTime -> UTCTime -> Int -> String

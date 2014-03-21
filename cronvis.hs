@@ -88,20 +88,12 @@ timeRange start end stepSecs = iter s
 formatMinuteTimestampForOutput :: UTCTime -> String
 formatMinuteTimestampForOutput = formatTime defaultTimeLocale "%Y-%m-%dT%H:%M"
 
--- Full ISO8601 date timestamp
-formatTimestampForOutput :: UTCTime -> String
-formatTimestampForOutput = formatTime defaultTimeLocale "%Y-%m-%dT%H:%M:%S"
-
 -- Get just the current year
 getCurrentYear :: IO Integer
 getCurrentYear = do
   curr <- getCurrentTime
   let (y,_,_) = toGregorian $ utctDay curr
   return y
-
--- For command line timestamp parsing
-parseIso8601Timestamp :: String -> UTCTime
-parseIso8601Timestamp s = readTime defaultTimeLocale "%Y-%m-%dT%H:%M" s :: UTCTime
 
 -- Full timestamp each N minutes
 csvColumnTimestamps :: UTCTime -> UTCTime -> Int -> String
@@ -130,17 +122,16 @@ csvData start end stepSecs jobnamesMap = concatMap printHelper jobnames
                           Nothing     -> error "Failed to get times of job; invariant failed"
 
 csvExport :: UTCTime -> UTCTime -> Map.Map String [UTCTime] -> String
-csvExport start end jobnamesMap = csvColumnTimestamps start end stepSecs ++
-                                  csvColumnMinutes start end stepSecs ++
-                                  csvData start end stepSecs jobnamesMap
-    where stepSecs = 60
-
-csvExport2 :: UTCTime -> UTCTime -> Map.Map String [UTCTime] -> String
-csvExport2 start end jobnamesMap =
+csvExport start end jobnamesMap =
     "Jobname/Timestamp;" ++ csvColumnTimestamps start end stepSecs ++ "\n" ++
     "Minutes;" ++ csvColumnMinutes start end stepSecs ++ "\n" ++
     csvData start end stepSecs jobnamesMap
         where stepSecs = 60
+
+-- For command line timestamp parsing
+parseIso8601Timestamp :: String -> UTCTime
+parseIso8601Timestamp s = readTime defaultTimeLocale "%Y-%m-%dT%H:%M" s :: UTCTime
+
 
 s = parseIso8601Timestamp "2014-03-17T06:25"
 e = parseIso8601Timestamp "2014-03-17T07:26"
@@ -155,7 +146,7 @@ foo = do
   putStrLn $ "Got " ++ show(length jobsBetween) ++ " jobs between start,end"
   let jobnamesMap = mapByJobnames database
   -- return jobnamesMap
-  putStrLn $ csvExport2 s e jobnamesMap
+  putStrLn $ csvExport s e jobnamesMap
 
 -- main = do
 --   contents <- readFile "syslog-20140318"

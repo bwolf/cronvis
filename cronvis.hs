@@ -10,6 +10,10 @@ import Data.Time.Clock.POSIX
 
 import qualified Data.Map as Map
 
+import Control.Monad (unless)
+import System.Environment (getArgs)
+import System.Exit (exitFailure)
+
 trim :: String -> String
 trim = f . f
     where f = reverse . dropWhile isSpace
@@ -132,11 +136,19 @@ csvExport start end jobnamesMap =
 parseIso8601Timestamp :: String -> UTCTime
 parseIso8601Timestamp s = readTime defaultTimeLocale "%Y-%m-%dT%H:%M" s :: UTCTime
 
-
 s = parseIso8601Timestamp "2014-03-17T06:25"
 e = parseIso8601Timestamp "2014-03-17T07:26"
 
-foo = do
+main = do
+  args <- getArgs
+  if length(args) == 3
+  then
+      putStrLn "OK"
+  else
+      putStrLn "Usage: filename start end\n\tstart,end are ISO8601 timestamps without secs. (YYYY-mm-ddTHH:MM)"
+      exitFailure
+
+
   contents <- readFile "syslog-20140318"
   let logLines = lines contents
   year <- getCurrentYear
@@ -147,19 +159,3 @@ foo = do
   let jobnamesMap = mapByJobnames database
   -- return jobnamesMap
   putStrLn $ csvExport s e jobnamesMap
-
--- main = do
---   contents <- readFile "syslog-20140318"
---   let logLines = lines contents
---   putStrLn $ "Got " ++ show(length logLines) ++ " lines"
---   year <- getCurrentYear
---   putStrLn $ "Hello the current year is " ++ show year
---   let dateParser = parseCronTimestamp year
---   let database = parseCronSyslog dateParser logLines
---   putStrLn $ "Got " ++ show(length database) ++ " cron entries"
---   let jobsBetween = between s e database
---   putStrLn $ "Got " ++ show(length jobsBetween) ++ " jobs between start,end"
---   let jobnamesMap = mapByJobnames database
---   putStrLn $ csvExport s e jobnamesMap
-
--- EOF

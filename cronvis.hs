@@ -121,6 +121,7 @@ csvData start end stepSecs jobnamesMap = concatMap printHelper jobnames
                               then "R;"
                               else ";"
           printHelper job   =
+              -- FIXME: times is just an unsorted dumb list where `elem` is pretty slow; use Data.Set
               let times = Map.lookup job jobnamesMap
               in job ++ case times of
                           Just times' -> ";" ++ concatMap (pointPri times')

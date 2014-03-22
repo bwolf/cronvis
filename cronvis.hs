@@ -152,16 +152,15 @@ main = do
     let filename = args !! 0
         start = args !! 1
         end = args !! 2
-    let start' = parseIso8601Timestamp start
+        start' = parseIso8601Timestamp start
         end' = parseIso8601Timestamp end
     contents <- readFile filename
-    let logLines = lines contents
     year <- getCurrentYear
-    let dateParser = parseCronTimestamp year
+    let logLines = lines contents
+        dateParser = parseCronTimestamp year
         database = parseCronSyslog dateParser logLines
         jobsBetween = between start' end' database
     hPutStrLn stderr $ "INFO: Got " ++ show(length jobsBetween) ++ " jobs between start,end"
-    let jobnamesMap = mapByJobnames database
-    putStrLn $ csvExport start' end' jobnamesMap
+    putStrLn $ csvExport start' end' (mapByJobnames database)
 
 -- EOF

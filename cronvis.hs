@@ -7,7 +7,6 @@ import Data.List
 
 import System.Locale (defaultTimeLocale)
 import Data.Time
-import Data.Time.Clock
 import Data.Time.Clock.POSIX
 
 import qualified Data.Map as Map
@@ -65,16 +64,16 @@ parseCronLine dateParser s = (time, jobname)
 
 -- Filter and parse all cron commands out of syslog log lines
 parseCronSyslog :: CronDateParser -> [String] -> [CronjobExecution]
-parseCronSyslog dateParser lines = noEmpty parseIt
-    where cronLines = filter (isInfixOf "/USR/SBIN/CRON") lines
+parseCronSyslog dateParser logLines = noEmpty parseIt
+    where cronLines = filter (isInfixOf "/USR/SBIN/CRON") logLines
           parseIt = map (parseCronLine dateParser) cronLines
           noEmpty = filter (not . null . snd)
 
 -- Create list of UTCTimes in interval [start end[.
 -- take into account that the jobs are ordered by using takeWhile instead of filter
 between :: UTCTime -> UTCTime -> [CronjobExecution] -> [CronjobExecution]
-between start end = takeWhile (pred . fst)
-    where pred t = t >= start && t < end
+between start end = takeWhile (predicate . fst)
+    where predicate t = t >= start && t < end
 
 -- Map of jobnames and their execution times in UTCTime
 mapByJobnames :: [CronjobExecution] -> Map.Map String [UTCTime]
@@ -140,6 +139,7 @@ parseIso8601Timestamp :: String -> UTCTime
 parseIso8601Timestamp s = readTime defaultTimeLocale "%Y-%m-%dT%H:%M" s :: UTCTime
 
 -- Example for ghci :main syslog-20140318 2014-03-17T06:25 2014-03-17T07:26
+main :: IO ()
 main = do
   me <- getProgName
   args <- getArgs
@@ -150,7 +150,7 @@ main = do
     exitFailure
     return ()
   else do
-    let filename = args !! 0
+    let filename = head args
         start = args !! 1
         end = args !! 2
         start' = parseIso8601Timestamp start

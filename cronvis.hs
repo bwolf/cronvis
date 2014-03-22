@@ -1,4 +1,6 @@
--- cronvis.hs my 1st test in haskell to translate transform.py to haskell
+-- cronvis.hs by MG on 2014-03-22: create syslog execution analysis as
+-- CSV file from syslog logfile.
+
 import Text.Regex
 import Data.Char (isSpace)
 import Data.List
@@ -10,8 +12,8 @@ import Data.Time.Clock.POSIX
 
 import qualified Data.Map as Map
 
-import Control.Monad (unless)
-import System.Environment (getArgs)
+import System.Environment (getArgs, getProgName)
+import System.IO (stderr, hPutStrLn)
 import System.Exit (exitFailure)
 
 trim :: String -> String
@@ -136,17 +138,30 @@ csvExport start end jobnamesMap =
 parseIso8601Timestamp :: String -> UTCTime
 parseIso8601Timestamp s = readTime defaultTimeLocale "%Y-%m-%dT%H:%M" s :: UTCTime
 
-s = parseIso8601Timestamp "2014-03-17T06:25"
-e = parseIso8601Timestamp "2014-03-17T07:26"
-
+-- Example for ghci :main syslog-20140318 2014-03-17T06:25 2014-03-17T07:26
 main = do
-  contents <- readFile "syslog-20140318"
-  let logLines = lines contents
-  year <- getCurrentYear
-  let dateParser = parseCronTimestamp year
-  let database = parseCronSyslog dateParser logLines
-  let jobsBetween = between s e database
-  putStrLn $ "Got " ++ show(length jobsBetween) ++ " jobs between start,end"
-  let jobnamesMap = mapByJobnames database
-  -- return jobnamesMap
-  putStrLn $ csvExport s e jobnamesMap
+  me <- getProgName
+  args <- getArgs
+  if 3 /= length args
+  then do
+    hPutStrLn stderr $ "Usage: " ++ me ++ " file startDate endDate\n" ++
+              "  where startdate,endDate is a ISO8601 timestamp w/o seconds.\n"
+    exitFailure
+    return ()
+  else do
+    let filename = args !! 0
+        start = args !! 1
+        end = args !! 2
+    let start' = parseIso8601Timestamp start
+        end' = parseIso8601Timestamp end
+    contents <- readFile filename
+    let logLines = lines contents
+    year <- getCurrentYear
+    let dateParser = parseCronTimestamp year
+        database = parseCronSyslog dateParser logLines
+        jobsBetween = between start' end' database
+    hPutStrLn stderr $ "Got " ++ show(length jobsBetween) ++ " jobs between [start..end["
+    let jobnamesMap = mapByJobnames database
+    putStrLn $ csvExport start' end' jobnamesMap
+
+-- EOF

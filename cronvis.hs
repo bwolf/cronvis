@@ -160,7 +160,7 @@ main = do
     let dateParser = parseCronTimestamp year
         database = parseCronSyslog dateParser logLines
         jobsBetween = between start' end' database
-    hPutStrLn stderr $ "Got " ++ show(length jobsBetween) ++ " jobs between [start..end["
+    hPutStrLn stderr $ "INFO: Got " ++ show(length jobsBetween) ++ " jobs between start,end"
     let jobnamesMap = mapByJobnames database
     putStrLn $ csvExport start' end' jobnamesMap
 

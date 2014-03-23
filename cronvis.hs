@@ -151,7 +151,11 @@ main = do
       end = parseIso8601Timestamp $ args !! 2
   contents <- readFile $ head args
   year <- getCurrentYear
-  let data1 = parseCronSyslog (parseCronTimestamp year) (lines contents)
-  putStrLn $ csvExport start end (mkCronjobExecutionMap data1)
+  let dat1 = parseCronSyslog (parseCronTimestamp year) (lines contents)
+      datStart = fst $ head dat1
+      datEnd = fst $ last dat1
+      start' = max start datStart
+      end' = min end datEnd
+  putStrLn $ csvExport start' end' (mkCronjobExecutionMap dat1)
 
 -- EOF

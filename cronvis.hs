@@ -10,10 +10,13 @@ import Data.Time
 import Data.Time.Clock.POSIX
 
 import qualified Data.Map as Map
+import qualified Data.Set as Set
 
 import System.Environment (getArgs, getProgName)
 import System.IO (stderr, hPutStrLn)
 import System.Exit (exitFailure)
+
+import Control.Monad
 
 trim :: String -> String
 trim = f . f
@@ -69,15 +72,12 @@ parseCronSyslog dateParser logLines = noEmpty parseIt
           parseIt = map (parseCronLine dateParser) cronLines
           noEmpty = filter (not . null . snd)
 
--- Create list of UTCTimes in interval [start end[.
--- take into account that the jobs are ordered by using takeWhile instead of filter
-between :: UTCTime -> UTCTime -> [CronjobExecution] -> [CronjobExecution]
-between start end = takeWhile (predicate . fst)
-    where predicate t = t >= start && t < end
+-- A type for cronjobs mapped by name to a set of the execution times
+type CronjobExecutionMap = Map.Map String (Set.Set UTCTime)
 
--- Map of jobnames and their execution times in UTCTime
-mapByJobnames :: [CronjobExecution] -> Map.Map String [UTCTime]
-mapByJobnames jobs = Map.fromListWith (++) $ map (\(ts,name) -> (name,[ts])) jobs
+mkCronjobExecutionMap :: [CronjobExecution] -> CronjobExecutionMap
+mkCronjobExecutionMap jobs = Map.fromListWith Set.union $
+                             map (\(ts,name) -> (name, Set.singleton ts)) jobs
 
 -- Range of UTCTimes
 timeRange :: UTCTime -> UTCTime -> Int -> [UTCTime]
@@ -93,13 +93,6 @@ timeRange start end stepSecs = iter s
 formatMinuteTimestampForOutput :: UTCTime -> String
 formatMinuteTimestampForOutput = formatTime defaultTimeLocale "%Y-%m-%dT%H:%M"
 
--- Get just the current year
-getCurrentYear :: IO Integer
-getCurrentYear = do
-  curr <- getCurrentTime
-  let (y,_,_) = toGregorian $ utctDay curr
-  return y
-
 -- Full timestamp each N minutes
 csvColumnTimestamps :: UTCTime -> UTCTime -> Int -> String
 csvColumnTimestamps start end stepSecs = intercalate filler timestamps
@@ -113,26 +106,32 @@ csvColumnMinutes start end stepSecs = concatMap (\ut -> show(minute ut) ++ ";") 
     where minute ut = todMin (timeToTimeOfDay $ utctDayTime ut)
           range     = timeRange start end stepSecs
 
-csvData :: UTCTime -> UTCTime -> Int -> Map.Map String [UTCTime] -> String
-csvData start end stepSecs jobnamesMap = concatMap printHelper jobnames
-    where jobnames          = sort (Map.keys jobnamesMap)
-          pointPri times ut = if ut `elem` times
+csvData :: UTCTime -> UTCTime -> Int -> CronjobExecutionMap -> String
+csvData start end stepSecs jobMap = concatMap printHelper jobnames
+    where jobnames          = sort (Map.keys jobMap)
+          pointPri times ut = if ut `Set.member` times
                               then "R;"
                               else ";"
           printHelper job   =
-              -- FIXME: times is just an unsorted dumb list where `elem` is pretty slow; use Data.Set
-              let times = Map.lookup job jobnamesMap
+              let times = Map.lookup job jobMap
               in job ++ case times of
                           Just times' -> ";" ++ concatMap (pointPri times')
                                          (timeRange start end stepSecs) ++ "\n"
                           Nothing     -> error "Failed to get times of job; invariant failed"
 
-csvExport :: UTCTime -> UTCTime -> Map.Map String [UTCTime] -> String
+csvExport :: UTCTime -> UTCTime -> CronjobExecutionMap -> String
 csvExport start end jobnamesMap =
     "Jobname/Timestamp;" ++ csvColumnTimestamps start end stepSecs ++ "\n" ++
     "Minutes;" ++ csvColumnMinutes start end stepSecs ++ "\n" ++
     csvData start end stepSecs jobnamesMap
         where stepSecs = 60
+
+-- Get just the current year
+getCurrentYear :: IO Integer
+getCurrentYear = do
+  curr <- getCurrentTime
+  let (y,_,_) = toGregorian $ utctDay curr
+  return y
 
 -- For command line timestamp parsing
 parseIso8601Timestamp :: String -> UTCTime
@@ -143,25 +142,16 @@ main :: IO ()
 main = do
   me <- getProgName
   args <- getArgs
-  if 3 /= length args
-  then do
+  when (3 /= length args) $ do
     hPutStrLn stderr $ "Usage: " ++ me ++ " file startDate endDate\n" ++
               "  where startdate,endDate is a ISO8601 timestamp w/o seconds.\n"
     exitFailure
-    return ()
-  else do
-    let filename = head args
-        start = args !! 1
-        end = args !! 2
-        start' = parseIso8601Timestamp start
-        end' = parseIso8601Timestamp end
-    contents <- readFile filename
-    year <- getCurrentYear
-    let logLines = lines contents
-        dateParser = parseCronTimestamp year
-        database = parseCronSyslog dateParser logLines
-        jobsBetween = between start' end' database
-    hPutStrLn stderr $ "INFO: Got " ++ show(length jobsBetween) ++ " jobs between start,end"
-    putStrLn $ csvExport start' end' (mapByJobnames database)
+
+  let start = parseIso8601Timestamp $ args !! 1
+      end = parseIso8601Timestamp $ args !! 2
+  contents <- readFile $ head args
+  year <- getCurrentYear
+  let data1 = parseCronSyslog (parseCronTimestamp year) (lines contents)
+  putStrLn $ csvExport start end (mkCronjobExecutionMap data1)
 
 -- EOF

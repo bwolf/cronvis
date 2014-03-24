@@ -79,8 +79,10 @@ mkCronjobExecutionMap :: [CronjobExecution] -> CronjobExecutionMap
 mkCronjobExecutionMap jobs = Map.fromListWith Set.union $
                              map (\(ts,name) -> (name, Set.singleton ts)) jobs
 
--- Range of UTCTimes
-timeRange :: UTCTime -> UTCTime -> Int -> [UTCTime]
+-- A range of UTCTimes
+type TimeRange = [UTCTime]
+
+timeRange :: UTCTime -> UTCTime -> Int -> TimeRange
 timeRange start end stepSecs = iter s
     where s = floor (utcTimeToPOSIXSeconds start) :: Int
           e = floor (utcTimeToPOSIXSeconds end) :: Int
@@ -101,13 +103,12 @@ csvColumnTimestamps start end stepSecs = intercalate filler timestamps
           range      = timeRange start end (stepSecs * fullTimestampSecs)
           timestamps = map formatMinuteTimestampForOutput range
 
-csvColumnMinutes :: UTCTime -> UTCTime -> Int -> String
-csvColumnMinutes start end stepSecs = concatMap (\ut -> show(minute ut) ++ ";") range
+csvColumnMinutes :: TimeRange -> String
+csvColumnMinutes = concatMap (\ut -> show(minute ut) ++ ";")
     where minute ut = todMin (timeToTimeOfDay $ utctDayTime ut)
-          range     = timeRange start end stepSecs
 
-csvData :: UTCTime -> UTCTime -> Int -> CronjobExecutionMap -> String
-csvData start end stepSecs jobMap = concatMap printHelper jobnames
+csvData :: TimeRange -> CronjobExecutionMap -> String
+csvData trange jobMap = concatMap printHelper jobnames
     where jobnames          = sort (Map.keys jobMap)
           pointPri times ut = if ut `Set.member` times
                               then "R;"
@@ -115,16 +116,17 @@ csvData start end stepSecs jobMap = concatMap printHelper jobnames
           printHelper job   =
               let times = Map.lookup job jobMap
               in job ++ case times of
-                          Just times' -> ";" ++ concatMap (pointPri times')
-                                         (timeRange start end stepSecs) ++ "\n"
+                          Just times' -> ";" ++ concatMap (pointPri times') trange ++ "\n"
                           Nothing     -> error "Failed to get times of job; invariant failed"
 
 csvExport :: UTCTime -> UTCTime -> CronjobExecutionMap -> String
 csvExport start end jobnamesMap =
-    "Jobname/Timestamp;" ++ csvColumnTimestamps start end stepSecs ++ "\n" ++
-    "Minutes;" ++ csvColumnMinutes start end stepSecs ++ "\n" ++
-    csvData start end stepSecs jobnamesMap
-        where stepSecs = 60
+    let range = timeRange start end 60
+    in
+      "Jobname/Timestamp;" ++ csvColumnTimestamps start end stepSecs ++ "\n" ++
+      "Minutes;" ++ csvColumnMinutes range ++ "\n" ++
+      csvData range jobnamesMap
+          where stepSecs = 60
 
 -- Get just the current year
 getCurrentYear :: IO Integer

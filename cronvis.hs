@@ -149,9 +149,10 @@ main = do
               "  where startdate,endDate is a ISO8601 timestamp w/o seconds.\n"
     exitFailure
 
-  let start = parseIso8601Timestamp $ args !! 1
-      end = parseIso8601Timestamp $ args !! 2
-  contents <- readFile $ head args
+  let (fname:s:e:_) = args
+  let start = parseIso8601Timestamp s
+      end = parseIso8601Timestamp e
+  contents <- readFile fname
   year <- getCurrentYear
   let dat1 = parseCronSyslog (parseCronTimestamp year) (lines contents)
       datStart = fst $ head dat1

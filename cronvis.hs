@@ -95,15 +95,15 @@ formatMinuteTimestampForOutput :: UTCTime -> String
 formatMinuteTimestampForOutput = formatTime defaultTimeLocale "%Y-%m-%dT%H:%M"
 
 -- Full timestamp each N minutes
-csvColumnTimestamps :: UTCTime -> UTCTime -> Int -> String
-csvColumnTimestamps start end stepSecs = intercalate filler timestamps
+csvColTimestamps :: UTCTime -> UTCTime -> Int -> String
+csvColTimestamps start end stepSecs = intercalate filler timestamps
     where fullTimestampSecs = 60
           filler     = concat $ replicate fullTimestampSecs ";"
           range      = timeRange start end (stepSecs * fullTimestampSecs)
           timestamps = map formatMinuteTimestampForOutput range
 
-csvColumnMinutes :: TimeRange -> String
-csvColumnMinutes = concatMap (\ut -> show(minute ut) ++ ";")
+csvColMinutes :: TimeRange -> String
+csvColMinutes = concatMap (\ut -> show(minute ut) ++ ";")
     where minute ut = todMin (timeToTimeOfDay $ utctDayTime ut)
 
 csvData :: TimeRange -> CronjobExecutionMap -> String
@@ -117,12 +117,12 @@ csvData tRange jobMap = concatMap printer (sort $ Map.keys jobMap)
                           Nothing -> error "No exec times for job; invariant failed"
 
 csvExport :: UTCTime -> UTCTime -> CronjobExecutionMap -> String
-csvExport start end jobnamesMap =
+csvExport start end jobMap =
     let range = timeRange start end 60
         stepSecs = 60
-    in "Jobname/Timestamp;" ++ csvColumnTimestamps start end stepSecs ++ "\n" ++
-       "Minutes;" ++ csvColumnMinutes range ++ "\n" ++
-       csvData range jobnamesMap
+    in "Jobname/Timestamp;" ++ csvColTimestamps start end stepSecs ++ "\n" ++
+       "Minutes;" ++ csvColMinutes range ++ "\n" ++
+       csvData range jobMap
 
 -- Get just the current year
 getCurrentYear :: IO Integer

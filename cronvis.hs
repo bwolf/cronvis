@@ -108,10 +108,10 @@ csvColumnMinutes = concatMap (\ut -> show(minute ut) ++ ";")
     where minute ut = todMin (timeToTimeOfDay $ utctDayTime ut)
 
 csvData :: TimeRange -> CronjobExecutionMap -> String
-csvData trange jobMap = concatMap printHelper (sort $ Map.keys jobMap)
+csvData trange jobMap = concatMap printer (sort $ Map.keys jobMap)
     where pointPri times ut | ut `Set.member` times = "R;"
                             | otherwise             = ";"
-          printHelper job   =
+          printer job   =
               let times = Map.lookup job jobMap
               in job ++ case times of
                           Just times' -> ";" ++ concatMap (pointPri times') trange ++ "\n"
@@ -120,11 +120,10 @@ csvData trange jobMap = concatMap printHelper (sort $ Map.keys jobMap)
 csvExport :: UTCTime -> UTCTime -> CronjobExecutionMap -> String
 csvExport start end jobnamesMap =
     let range = timeRange start end 60
-    in
-      "Jobname/Timestamp;" ++ csvColumnTimestamps start end stepSecs ++ "\n" ++
-      "Minutes;" ++ csvColumnMinutes range ++ "\n" ++
-      csvData range jobnamesMap
-          where stepSecs = 60
+        stepSecs = 60
+    in "Jobname/Timestamp;" ++ csvColumnTimestamps start end stepSecs ++ "\n" ++
+       "Minutes;" ++ csvColumnMinutes range ++ "\n" ++
+       csvData range jobnamesMap
 
 -- Get just the current year
 getCurrentYear :: IO Integer

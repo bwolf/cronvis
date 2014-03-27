@@ -113,8 +113,8 @@ csvData trange jobMap = concatMap printer (sort $ Map.keys jobMap)
           printer job   =
               let times = Map.lookup job jobMap
               in job ++ case times of
-                          Just times' -> ";" ++ concatMap (pointPri times') trange ++ "\n"
-                          Nothing     -> error "Failed to get times of job; invariant failed"
+                          Just t  -> ";" ++ concatMap (pointPri t) trange ++ "\n"
+                          Nothing -> error "No exec times for job; invariant failed"
 
 csvExport :: UTCTime -> UTCTime -> CronjobExecutionMap -> String
 csvExport start end jobnamesMap =

@@ -108,11 +108,9 @@ csvColumnMinutes = concatMap (\ut -> show(minute ut) ++ ";")
     where minute ut = todMin (timeToTimeOfDay $ utctDayTime ut)
 
 csvData :: TimeRange -> CronjobExecutionMap -> String
-csvData trange jobMap = concatMap printHelper jobnames
-    where jobnames          = sort (Map.keys jobMap)
-          pointPri times ut = if ut `Set.member` times
-                              then "R;"
-                              else ";"
+csvData trange jobMap = concatMap printHelper (sort $ Map.keys jobMap)
+    where pointPri times ut | ut `Set.member` times = "R;"
+                            | otherwise             = ";"
           printHelper job   =
               let times = Map.lookup job jobMap
               in job ++ case times of
@@ -155,10 +153,8 @@ main = do
   contents <- readFile fname
   year <- getCurrentYear
   let dat1 = parseCronSyslog (parseCronTimestamp year) (lines contents)
-      datStart = fst $ head dat1
-      datEnd = fst $ last dat1
-      start' = max start datStart
-      end' = min end datEnd
+      start' = max start (fst $ head dat1)
+      end' = min end (fst $ last dat1)
   putStrLn $ csvExport start' end' (mkCronjobExecutionMap dat1)
 
 -- EOF

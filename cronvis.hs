@@ -107,13 +107,13 @@ csvColumnMinutes = concatMap (\ut -> show(minute ut) ++ ";")
     where minute ut = todMin (timeToTimeOfDay $ utctDayTime ut)
 
 csvData :: TimeRange -> CronjobExecutionMap -> String
-csvData trange jobMap = concatMap printer (sort $ Map.keys jobMap)
+csvData tRange jobMap = concatMap printer (sort $ Map.keys jobMap)
     where pointPri times ut | ut `Set.member` times = "R;"
                             | otherwise             = ";"
           printer job   =
               let times = Map.lookup job jobMap
               in job ++ case times of
-                          Just t  -> ";" ++ concatMap (pointPri t) trange ++ "\n"
+                          Just t  -> ";" ++ concatMap (pointPri t) tRange ++ "\n"
                           Nothing -> error "No exec times for job; invariant failed"
 
 csvExport :: UTCTime -> UTCTime -> CronjobExecutionMap -> String

@@ -91,8 +91,8 @@ timeRange start end stepSecs = iter s
               where curr = posixSecondsToUTCTime (fromIntegral n :: NominalDiffTime)
 
 -- Simplified ISO8601 date format without seconds
-formatMinuteTimestampForOutput :: UTCTime -> String
-formatMinuteTimestampForOutput = formatTime defaultTimeLocale "%Y-%m-%dT%H:%M"
+minuteTimestampForOutput :: UTCTime -> String
+minuteTimestampForOutput = formatTime defaultTimeLocale "%Y-%m-%dT%H:%M"
 
 -- Full timestamp each N minutes
 csvColTimestamps :: UTCTime -> UTCTime -> Int -> String
@@ -100,7 +100,7 @@ csvColTimestamps start end stepSecs = intercalate filler timestamps
     where fullTimestampSecs = 60
           filler     = concat $ replicate fullTimestampSecs ";"
           range      = timeRange start end (stepSecs * fullTimestampSecs)
-          timestamps = map formatMinuteTimestampForOutput range
+          timestamps = map minuteTimestampForOutput range
 
 csvColMinutes :: TimeRange -> String
 csvColMinutes = concatMap (\ut -> show(minute ut) ++ ";")

@@ -86,10 +86,9 @@ timeRange :: UTCTime -> UTCTime -> Int -> TimeRange
 timeRange start end stepSecs = iter s
     where s = floor (utcTimeToPOSIXSeconds start) :: Int
           e = floor (utcTimeToPOSIXSeconds end) :: Int
-          iter n
-              | n > e = []
-              | otherwise = current : iter (n + stepSecs)
-              where current = posixSecondsToUTCTime (fromIntegral n :: NominalDiffTime)
+          iter n | n > e = []
+                 | otherwise = curr : iter (n + stepSecs)
+              where curr = posixSecondsToUTCTime (fromIntegral n :: NominalDiffTime)
 
 -- Simplified ISO8601 date format without seconds
 formatMinuteTimestampForOutput :: UTCTime -> String
